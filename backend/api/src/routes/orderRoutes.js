@@ -1054,11 +1054,11 @@ router.post('/:id/resend-otp', authenticate, userLimiter, requireRole(['driver']
 // 15. CHANGE DROP (CUSTOMER)
 // ============================================================================
 router.put('/:id/change-drop', authenticate, userLimiter, requireRole(['customer']), validateParams(paramIdSchema), validateBody(changeDropSchema), async (req, res) => {
-  const orderId = req.params.id; // this is order_display_id from client
+  const orderId = req.params.id;
   const { drop_address, drop_lat, drop_lng } = req.body;
 
   try {
-    const { data: order, error: orderErr } = await supabase.from('orders').select('*').eq('order_display_id', orderId).maybeSingle();
+    const { data: order, error: orderErr } = await supabase.from('orders').select('*').eq('id', orderId).maybeSingle();
     if (orderErr) return res.status(500).json({ error: 'Failed to fetch order.', details: orderErr.message });
     if (!order) return res.status(404).json({ error: 'Order not found.' });
     if (order.customer_id !== req.user.id) return res.status(403).json({ error: 'Access Denied: You do not own this order.' });
@@ -1105,7 +1105,7 @@ router.put('/:id/change-drop', authenticate, userLimiter, requireRole(['customer
       updated_at: new Date().toISOString(),
     };
 
-    const { data: updatedOrder, error: updateErr } = await supabase.from('orders').update(updates).eq('order_display_id', orderId).select('*').single();
+    const { data: updatedOrder, error: updateErr } = await supabase.from('orders').update(updates).eq('id', order.id).select('*').single();
     if (updateErr) return res.status(500).json({ error: 'Failed to update order.', details: updateErr.message });
 
     const { error: offerUpdateErr } = await supabase
@@ -1121,7 +1121,7 @@ router.put('/:id/change-drop', authenticate, userLimiter, requireRole(['customer
         net_profit: pricing.netProfit,
         extra_distance_km: pricing.distanceKm,
       })
-      .eq('order_display_id', orderId);
+      .eq('order_display_id', order.order_display_id);
 
     if (offerUpdateErr) {
       logger.error('Load offer update failed for change-drop:', offerUpdateErr.message);
@@ -1153,11 +1153,11 @@ router.put('/:id/change-drop', authenticate, userLimiter, requireRole(['customer
 // 16. CANCEL ORDER AND REFUND ESCROW (CUSTOMER)
 // ============================================================================
 router.post('/:id/cancel', authenticate, userLimiter, requireRole(['customer']), validateParams(paramIdSchema), validateBody(cancelOrderSchema), async (req, res) => {
-  const orderId = req.params.id; // this is order_display_id from client
+  const orderId = req.params.id;
   const { reason = null } = req.body || {};
 
   try {
-    const { data: order, error: orderErr } = await supabase.from('orders').select('*').eq('order_display_id', orderId).maybeSingle();
+    const { data: order, error: orderErr } = await supabase.from('orders').select('*').eq('id', orderId).maybeSingle();
     if (orderErr) return res.status(500).json({ error: 'Failed to fetch order.', details: orderErr.message });
     if (!order) return res.status(404).json({ error: 'Order not found.' });
     if (order.customer_id !== req.user.id) return res.status(403).json({ error: 'Access Denied: You do not own this order.' });
@@ -1201,7 +1201,7 @@ router.post('/:id/cancel', authenticate, userLimiter, requireRole(['customer']),
           escrow_refund_last_attempt_at: attemptAt,
           updated_at: attemptAt,
         })
-        .eq('order_display_id', orderId)
+        .eq('id', order.id)
         .not('status', 'in', '("delivered","payment_released")')
         .select('*')
         .single();
@@ -1241,7 +1241,7 @@ router.post('/:id/cancel', authenticate, userLimiter, requireRole(['customer']),
               escrow_refund_submitted_at: submittedAt,
               updated_at: submittedAt,
             })
-            .eq('order_display_id', orderId)
+            .eq('id', order.id)
             .eq('escrow_status', 'refund_pending');
 
           if (hashErr) {
@@ -1262,7 +1262,7 @@ router.post('/:id/cancel', authenticate, userLimiter, requireRole(['customer']),
             escrow_refund_error: null,
             updated_at: refundedAt,
           })
-          .eq('order_display_id', orderId)
+          .eq('id', order.id)
           .in('escrow_status', ['refund_pending', 'refund_failed'])
           .select('cancellation_fee, order_display_id, status, cancellation_reason, escrow_status, refund_tx_hash')
           .single();
@@ -1297,7 +1297,7 @@ router.post('/:id/cancel', authenticate, userLimiter, requireRole(['customer']),
           escrow_refund_error: String(refundErr.message || refundErr).slice(0, 1000),
           escrow_refund_last_attempt_at: failedAt,
           updated_at: failedAt,
-        }).eq('order_display_id', orderId);
+        }).eq('id', order.id);
 
         return res.status(202).json({
           message: 'Order cancelled. Escrow refund requires reconciliation.',
@@ -1318,7 +1318,7 @@ router.post('/:id/cancel', authenticate, userLimiter, requireRole(['customer']),
 
     const { data: updatedOrder, error: updateErr } = await supabase.from('orders')
       .update(updatePayload)
-      .eq('order_display_id', orderId)
+      .eq('id', order.id)
       .not('status', 'in', '("delivered","payment_released","cancelled")')
       .select('cancellation_fee, order_display_id, status, cancellation_reason, escrow_status')
       .single();
@@ -1406,14 +1406,14 @@ router.post('/predict-demand', authenticate, userLimiter, requireRole(['customer
 // 19. GET DRIVER LOCATION (CUSTOMER OR DRIVER)
 // ============================================================================
 router.get('/:id/driver-location', authenticate, userLimiter, requireRole(['customer', 'driver']), validateParams(paramIdSchema), async (req, res) => {
-  const orderId = req.params.id; // this is order_display_id from client
-  
+  const orderId = req.params.id;
+
   try {
     // 1. Resolve order and check authentication / authorization
     const { data: order, error: orderErr } = await supabase
       .from('orders')
       .select('id, customer_id, driver_id, status')
-      .eq('order_display_id', orderId)
+      .eq('id', orderId)
       .maybeSingle();
 
     if (orderErr) {
