@@ -97,7 +97,8 @@ async def root(_auth=Depends(verify_api_key)):
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    """Health check endpoint for Docker container orchestration."""
+    return {"status": "healthy", "service": "ml-engine"}
 
 
 @app.post("/predict/demand", response_model=DemandForecastOutput)
