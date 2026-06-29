@@ -53,12 +53,14 @@ describe('tracker WebSocket telemetry authorization', () => {
     dbMock.store.orders = [];
     dbMock.calls = [];
     __testing.resetTrackingSubscriptions();
+    vi.clearAllMocks();
   });
 
   it('rejects a driver_id that does not match the authenticated socket', async () => {
     const sentMessages = [];
     const ws = {
       driverId: 'authenticated-driver',
+      close: vi.fn(),
       send(message) {
         sentMessages.push(JSON.parse(message));
       },
