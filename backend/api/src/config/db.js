@@ -36,10 +36,13 @@ if (supabaseUrl && supabaseAnonKey) {
     logger.error({ err: error }, 'Failed to initialize Supabase client');
   }
 } else {
-  logger.warn('SUPABASE_URL or keys not found in .env. Supabase integration disabled.');
+  logger.warn(
+    'SUPABASE_URL or SUPABASE_ANON_KEY not found in .env. Supabase integration disabled. ' +
+    'Do NOT use SUPABASE_SERVICE_ROLE_KEY for the public client — it bypasses Row Level Security.'
+  );
 }
 
-if (supabaseUrl && supabaseServiceKey) {
+if (supabaseUrl && supabaseServiceKey && supabaseServiceKey !== supabaseKey) {
   try {
     supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
