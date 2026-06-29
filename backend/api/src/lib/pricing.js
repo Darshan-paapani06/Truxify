@@ -27,28 +27,27 @@ const DEFAULTS = Object.freeze({
   TOLL_PER_KM: 200,         // paisa per km, proxy for highway toll
 });
 
-/**
- * Safely converts an environment variable to a finite number, falling back to
- * the default if the variable is absent, empty, or contains a non-numeric value.
- */
-function rateEnv(key, fallback) {
-  const raw = process.env[key];
-  if (raw === undefined || raw === null || raw.trim() === '') {
-    return fallback;
-  }
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : fallback;
+function parsePositiveInt(raw, fallback) {
+  if (raw === null || raw === undefined || raw === '') return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+function parsePositiveFloat(raw, fallback) {
+  if (raw === null || raw === undefined || raw === '') return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
 function readRateCard() {
   return {
-    ratePerTonneKm: rateEnv('TRUXIFY_RATE_PER_TONNE_KM', DEFAULTS.RATE_PER_TONNE_KM),
-    fragileMultiplier: rateEnv('TRUXIFY_FRAGILE_MULTIPLIER', DEFAULTS.FRAGILE_MULTIPLIER),
-    stackableDiscount: rateEnv('TRUXIFY_STACKABLE_DISCOUNT', DEFAULTS.STACKABLE_DISCOUNT),
-    handlingFee: rateEnv('TRUXIFY_HANDLING_FEE', DEFAULTS.HANDLING_FEE),
-    platformFeePct: rateEnv('TRUXIFY_PLATFORM_FEE_PCT', DEFAULTS.PLATFORM_FEE_PCT),
-    fuelCostPct: rateEnv('TRUXIFY_FUEL_COST_PCT', DEFAULTS.FUEL_COST_PCT),
-    tollPerKm: rateEnv('TRUXIFY_TOLL_PER_KM', DEFAULTS.TOLL_PER_KM),
+    ratePerTonneKm: parsePositiveInt(process.env.TRUXIFY_RATE_PER_TONNE_KM, DEFAULTS.RATE_PER_TONNE_KM),
+    fragileMultiplier: parsePositiveFloat(process.env.TRUXIFY_FRAGILE_MULTIPLIER, DEFAULTS.FRAGILE_MULTIPLIER),
+    stackableDiscount: parsePositiveFloat(process.env.TRUXIFY_STACKABLE_DISCOUNT, DEFAULTS.STACKABLE_DISCOUNT),
+    handlingFee: parsePositiveInt(process.env.TRUXIFY_HANDLING_FEE, DEFAULTS.HANDLING_FEE),
+    platformFeePct: parsePositiveInt(process.env.TRUXIFY_PLATFORM_FEE_PCT, DEFAULTS.PLATFORM_FEE_PCT),
+    fuelCostPct: parsePositiveInt(process.env.TRUXIFY_FUEL_COST_PCT, DEFAULTS.FUEL_COST_PCT),
+    tollPerKm: parsePositiveInt(process.env.TRUXIFY_TOLL_PER_KM, DEFAULTS.TOLL_PER_KM),
   };
 }
 
